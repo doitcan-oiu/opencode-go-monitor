@@ -111,20 +111,25 @@
     </div>
 
     <!-- 分页 -->
-    <div v-if="accounts.length" class="mt-6 flex flex-wrap items-center justify-center gap-3 text-sm">
-      <div v-if="totalPages>1" class="flex items-center gap-2">
-        <button @click="page=1" :disabled="page===1" class="oc-pg">«</button>
-        <button @click="page--" :disabled="page===1" class="oc-pg">上一页</button>
-        <span class="text-mute">{{ page }} / {{ totalPages }}</span>
-        <button @click="page++" :disabled="page===totalPages" class="oc-pg">下一页</button>
-        <button @click="page=totalPages" :disabled="page===totalPages" class="oc-pg">»</button>
-      </div>
-      <span class="text-xs text-mute">共 {{ accounts.length }} 个 · 每页
-        <select v-model.number="pageSize" class="rounded-sm border border-hairline bg-canvas-soft px-1.5 py-0.5 text-ink outline-none">
+    <div v-if="accounts.length" class="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+      <div class="order-2 text-xs text-mute sm:order-1">
+        共 <span class="font-mono text-body">{{ accounts.length }}</span> 个账号 · 每页
+        <select v-model.number="pageSize" class="ml-1 rounded-md border border-hairline bg-canvas-soft px-2 py-1 text-ink outline-none focus:border-primary">
           <option :value="12">12</option><option :value="24">24</option><option :value="48">48</option><option :value="96">96</option>
         </select>
-      </span>
-      <span class="text-xs text-mute">右键账号卡片可操作</span>
+      </div>
+
+      <nav v-if="totalPages>1" class="order-1 flex items-center gap-1.5 sm:order-2">
+        <button @click="page--" :disabled="page===1" class="oc-pg" aria-label="上一页">‹</button>
+        <template v-for="p in pageList" :key="p">
+          <span v-if="p==='...'" class="grid h-9 w-6 place-items-center text-mute">…</span>
+          <button v-else @click="page=p" class="oc-pg"
+            :class="p===page ? '!border-primary !bg-primary !text-canvas font-semibold' : ''">{{ p }}</button>
+        </template>
+        <button @click="page++" :disabled="page===totalPages" class="oc-pg" aria-label="下一页">›</button>
+      </nav>
+
+      <div class="order-3 hidden text-xs text-mute lg:block">右键卡片可操作</div>
     </div>
   </main>
 
@@ -209,7 +214,7 @@
 <style type="text/tailwindcss">
   @layer components {
     .oc-input { @apply w-full rounded-sm border border-hairline bg-canvas-soft px-3 py-2 text-sm text-ink outline-none focus:border-primary; }
-    .oc-pg { @apply rounded-sm border border-hairline bg-canvas px-2.5 py-1 text-body hover:border-mute disabled:opacity-40; }
+    .oc-pg { @apply grid h-9 min-w-9 place-items-center rounded-md border border-hairline bg-canvas px-2.5 text-sm text-body transition hover:border-mute hover:text-ink disabled:pointer-events-none disabled:opacity-40; }
   }
 </style>
 <script src="/static/dashboard.js"></script>

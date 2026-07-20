@@ -20,6 +20,20 @@ createApp({
       const start = (this.page - 1) * this.pageSize;
       return this.accounts.slice(start, start + this.pageSize);
     },
+    // 页码序列：页数少时全列，否则首尾 + 当前页附近，中间用 '...' 省略。
+    pageList() {
+      const t = this.totalPages, c = this.page;
+      if (t <= 7) return Array.from({ length: t }, (_, i) => i + 1);
+      const nums = [...new Set([1, 2, c - 1, c, c + 1, t - 1, t])].filter(n => n >= 1 && n <= t).sort((a, b) => a - b);
+      const out = [];
+      let prev = 0;
+      for (const n of nums) {
+        if (n - prev > 1) out.push('...');
+        out.push(n);
+        prev = n;
+      }
+      return out;
+    },
     infoRows() {
       const a = this.infoAcc;
       if (!a) return [];
