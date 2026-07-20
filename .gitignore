@@ -1,8 +1,13 @@
-# 运行时数据（含明文密码 / Auth，切勿提交）
+# 运行时数据（含明文密码 / Auth / API Key，切勿提交）
 /data/
 *.db
 *.db-shm
 *.db-wal
+accounts.json
+
+# 本地编辑器/工具配置
+.claude/settings.local.json
+.claude/settings.local.json.tmp*
 
 # 编译产物
 /monitor

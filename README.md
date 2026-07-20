@@ -25,16 +25,48 @@
 └── go.mod
 ```
 
-## 运行
+## 编译 / 运行
 
+需要 Go 1.22+；纯 Go 依赖，**无需 CGO / gcc**。
+
+**直接运行（开发）**
 ```bash
-go run ./cmd/monitor      # 打开 http://localhost:8787
+go run ./cmd/monitor            # 打开 http://localhost:8787
 ```
+
+**编译成单个二进制**（前端已 `//go:embed` 进二进制，可单文件拷走运行）
+```bash
+go build -o monitor ./cmd/monitor
+./monitor
+```
+
+**带环境变量**
+```bash
+ADDR=:9000 DATA_DIR=/opt/ocmon/data ./monitor
+```
+
+**交叉编译**（`CGO_ENABLED=0` 生成静态二进制，目标机无需装任何东西）
+```bash
+CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -o monitor-linux   ./cmd/monitor
+CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build -o monitor-arm64   ./cmd/monitor
+CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o monitor.exe     ./cmd/monitor
+CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -o monitor-mac     ./cmd/monitor
+```
+
+**后台常驻**
+```bash
+nohup ./monitor > monitor.log 2>&1 &
+```
+
+首次编译会联网拉依赖（`modernc.org/sqlite` 等），之后离线可编译；如需预拉：`go mod download`。
 
 | 环境变量 | 默认 | 说明 |
 |---|---|---|
 | `ADDR` | `:8787` | 监听地址 |
 | `DATA_DIR` | `data` | 数据目录，SQLite 存于 `<DATA_DIR>/monitor.db` |
+
+页面操作：**点击邮箱**查看账号详情；**右键账号卡片**弹出操作菜单（刷新 / 改 Auth / 改 Key / 删除）；
+底部可翻页、调整每页数量。最新添加的账号排在最后。
 
 其余可调项在页面 **设置** 里改（存数据库）：自动刷新间隔、请求超时、并发数、额度紧张阈值、
 即将到期天数、**转发 Key**。

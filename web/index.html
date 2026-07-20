@@ -67,70 +67,98 @@
     </div>
   </header>
 
-  <main class="mx-auto max-w-7xl px-6 py-8">
+  <main class="mx-auto max-w-7xl px-6 py-6">
     <div v-if="accounts.length===0" class="rounded-md border border-dashed border-hairline bg-canvas-soft p-12 text-center text-mute">
       还没有账号，点击右上角「添加账号」开始监控。
     </div>
 
-    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-      <article v-for="a in sortedAccounts" :key="a.id" class="flex flex-col rounded-md border bg-canvas p-5"
-        :class="a.status==='error' ? 'border-danger/40' : 'border-hairline'">
-        <div class="mb-3 flex items-start justify-between gap-2">
-          <div class="min-w-0">
-            <div class="truncate text-sm font-semibold text-ink-strong">{{ a.account || a.reportEmail || '未命名账号' }}</div>
-            <div v-if="a.reportEmail && a.reportEmail!==a.account" class="truncate text-xs text-mute">页面登录：{{ a.reportEmail }}</div>
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+      <article v-for="a in pagedAccounts" :key="a.id" @contextmenu.prevent="openMenu($event, a)"
+        class="flex flex-col rounded-md border bg-canvas p-4" :class="a.status==='error' ? 'border-danger/40' : 'border-hairline'">
+        <!-- 顶部：邮箱 + 已订阅 / 状态 / 剩余天数 -->
+        <div class="mb-2 flex items-start justify-between gap-2">
+          <button @click="openInfo(a)" :title="a.account" class="min-w-0 truncate text-left text-sm font-semibold text-ink-strong hover:text-primary hover:underline">
+            {{ a.account || a.reportEmail || '未命名账号' }}
+          </button>
+          <div class="flex shrink-0 items-center gap-1">
+            <span v-if="a.subscribed" class="rounded-full border border-primary/40 px-1.5 py-0.5 text-[11px] text-primary-soft">已订阅</span>
+            <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="health(a).cls">{{ health(a).label }}</span>
+            <span v-if="a.expiresAt" class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="expiryBadgeCls(a)">{{ expiryLabel(a) }}</span>
           </div>
-          <span class="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="health(a).cls">{{ health(a).label }}</span>
         </div>
 
-        <div class="mb-4 flex flex-wrap items-center gap-2 text-xs">
-          <span class="rounded-sm bg-canvas-soft px-2 py-0.5 font-mono text-body">{{ a.workspaceID }}</span>
-          <span v-if="a.subscribed" class="rounded-full border border-primary/40 px-2 py-0.5 text-primary-soft">已订阅</span>
-          <span v-if="a.hasKey" class="rounded-full border border-primary/40 px-2 py-0.5 text-primary-soft">Key ✓ · 转发 {{ a.proxyCount }}</span>
-          <span v-else class="rounded-full border border-hairline px-2 py-0.5 text-mute">无 Key</span>
+        <!-- Key / 转发次数 / 最后抓取 -->
+        <div class="mb-3 truncate text-[11px]">
+          <span v-if="a.hasKey" class="text-primary-soft">Key ✓ · 转发 {{ a.proxyCount }}</span>
+          <span v-else class="text-mute">无 Key</span>
+          <span v-if="a.lastChecked" class="text-mute"> · 抓取 {{ fmtClock(a.lastChecked) }}</span>
         </div>
 
-        <div class="space-y-3">
+        <div class="space-y-2">
           <div v-for="u in usageRows(a)" :key="u.key">
-            <div class="mb-1 flex items-center justify-between text-xs">
+            <div class="mb-0.5 flex items-center justify-between text-[11px]">
               <span class="text-body">{{ u.label }}</span>
               <span class="font-mono" :class="pctText(u.data)">{{ u.data ? u.data.usagePercent + '%' : '—' }}</span>
             </div>
             <div class="h-1.5 w-full overflow-hidden rounded-full bg-canvas-soft">
               <div class="h-full rounded-full transition-all" :class="barCls(u.data)" :style="{ width: (u.data ? Math.min(u.data.usagePercent,100) : 0) + '%' }"></div>
             </div>
-            <div class="mt-0.5 text-right text-[11px] text-mute" v-if="u.data">重置于 {{ fmtDur(u.data.resetInSec) }}</div>
           </div>
         </div>
 
-        <div class="mt-4 rounded-sm bg-canvas-soft px-3 py-2">
-          <div class="flex items-center justify-between text-xs">
-            <span class="text-mute">到期（按每月重置）</span>
-            <span class="font-mono font-semibold" :class="expiryCls(a)">{{ a.expiresAt ? fmtDate(a.expiresAt) : '—' }}</span>
-          </div>
-          <div v-if="a.expiresAt" class="mt-0.5 text-right text-[11px]" :class="expiryCls(a)">
-            {{ a.expiresIn > 0 ? '剩 ' + fmtDur(a.expiresIn) : '已到期 ' + fmtDur(-a.expiresIn) + '前' }}
-          </div>
-        </div>
-
-        <p v-if="a.error" class="mt-3 text-xs text-danger">⚠ {{ a.error }}</p>
-
-        <div class="mt-4 flex items-center justify-between border-t border-hairline pt-3 text-xs">
-          <span class="text-mute">{{ a.lastChecked ? '抓取于 ' + fmtClock(a.lastChecked) : '尚未抓取' }}</span>
-          <div class="flex items-center gap-3">
-            <button @click="refreshOne(a)" :disabled="a._busy" class="text-primary-soft hover:text-primary disabled:opacity-50">{{ a._busy ? '刷新中…' : '刷新' }}</button>
-            <button @click="editField(a,'auth','Auth（Cookie 头）')" class="text-body hover:text-ink">改Auth</button>
-            <button @click="editField(a,'apiKey','API Key')" class="text-body hover:text-ink">改Key</button>
-            <button @click="del(a)" class="text-danger/80 hover:text-danger">删除</button>
-          </div>
-        </div>
+        <p v-if="a.error" class="mt-2 truncate text-[11px] text-danger" :title="a.error">⚠ {{ a.error }}</p>
       </article>
     </div>
 
-    <footer class="mt-12 border-t border-hairline pt-6 text-center text-xs text-mute">
-      本地运行 · 数据仅存于本机 · 转发接口见「设置」页
-    </footer>
+    <!-- 分页 -->
+    <div v-if="accounts.length" class="mt-6 flex flex-wrap items-center justify-center gap-3 text-sm">
+      <div v-if="totalPages>1" class="flex items-center gap-2">
+        <button @click="page=1" :disabled="page===1" class="oc-pg">«</button>
+        <button @click="page--" :disabled="page===1" class="oc-pg">上一页</button>
+        <span class="text-mute">{{ page }} / {{ totalPages }}</span>
+        <button @click="page++" :disabled="page===totalPages" class="oc-pg">下一页</button>
+        <button @click="page=totalPages" :disabled="page===totalPages" class="oc-pg">»</button>
+      </div>
+      <span class="text-xs text-mute">共 {{ accounts.length }} 个 · 每页
+        <select v-model.number="pageSize" class="rounded-sm border border-hairline bg-canvas-soft px-1.5 py-0.5 text-ink outline-none">
+          <option :value="12">12</option><option :value="24">24</option><option :value="48">48</option><option :value="96">96</option>
+        </select>
+      </span>
+      <span class="text-xs text-mute">右键账号卡片可操作</span>
+    </div>
   </main>
+
+  <!-- 右键菜单 -->
+  <template v-if="menu.show">
+    <div class="fixed inset-0 z-40" @click="menu.show=false" @contextmenu.prevent="menu.show=false"></div>
+    <div class="fixed z-50 w-36 overflow-hidden rounded-md border border-hairline bg-canvas py-1 text-sm shadow-2xl" :style="{ top: menu.y+'px', left: menu.x+'px' }">
+      <button @click="menuAction('refresh')" class="block w-full px-3 py-1.5 text-left text-primary-soft hover:bg-canvas-soft">刷新</button>
+      <button @click="menuAction('info')" class="block w-full px-3 py-1.5 text-left text-body hover:bg-canvas-soft">账号信息</button>
+      <button @click="menuAction('auth')" class="block w-full px-3 py-1.5 text-left text-body hover:bg-canvas-soft">改 Auth</button>
+      <button @click="menuAction('key')" class="block w-full px-3 py-1.5 text-left text-body hover:bg-canvas-soft">改 API Key</button>
+      <button @click="menuAction('del')" class="block w-full border-t border-hairline px-3 py-1.5 text-left text-danger hover:bg-canvas-soft">删除</button>
+    </div>
+  </template>
+
+  <!-- 账号信息弹窗 -->
+  <div v-if="infoAcc" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:p-10" @click.self="infoAcc=null">
+    <div class="w-full max-w-md rounded-md border border-hairline bg-canvas shadow-2xl ring-1 ring-white/5">
+      <div class="flex items-center justify-between border-b border-hairline px-5 py-4">
+        <span class="text-sm font-semibold text-ink-strong">账号信息</span>
+        <button @click="infoAcc=null" class="text-lg leading-none text-mute hover:text-ink">✕</button>
+      </div>
+      <div class="space-y-2.5 p-5 text-sm">
+        <div v-for="row in infoRows" :key="row.k" class="flex items-start justify-between gap-4">
+          <span class="shrink-0 text-mute">{{ row.k }}</span>
+          <span class="min-w-0 break-all text-right font-mono" :class="row.cls || 'text-ink'">{{ row.v }}</span>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 border-t border-hairline px-5 py-4">
+        <button @click="refreshOne(infoAcc)" class="rounded-sm border border-hairline bg-canvas px-4 py-2 text-sm font-semibold text-ink hover:border-mute">刷新</button>
+        <button @click="infoAcc=null" class="rounded-sm bg-primary px-4 py-2 text-sm font-semibold text-canvas hover:bg-primary-soft">关闭</button>
+      </div>
+    </div>
+  </div>
 
   <!-- 提示 toast -->
   <div v-if="msg && !showAdd" class="fixed bottom-6 right-6 z-50 rounded-md border border-hairline bg-canvas px-4 py-3 text-sm text-primary-soft shadow-2xl">{{ msg }}</div>
@@ -181,6 +209,7 @@
 <style type="text/tailwindcss">
   @layer components {
     .oc-input { @apply w-full rounded-sm border border-hairline bg-canvas-soft px-3 py-2 text-sm text-ink outline-none focus:border-primary; }
+    .oc-pg { @apply rounded-sm border border-hairline bg-canvas px-2.5 py-1 text-body hover:border-mute disabled:opacity-40; }
   }
 </style>
 <script src="/static/dashboard.js"></script>

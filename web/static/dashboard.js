@@ -8,12 +8,37 @@ createApp({
       mode: 'single', showAdd: false, busy: false, refreshing: false,
       msg: '', lastSync: null,
       settings: { warnPercent: 80, expirySoonDays: 3 },
+      page: 1, pageSize: 24,
+      menu: { show: false, x: 0, y: 0, acc: null },
+      infoAcc: null,
     };
   },
   computed: {
-    sortedAccounts() {
-      const rank = a => a.status === 'error' ? 0 : this.health(a).level;
-      return [...this.accounts].sort((x, y) => rank(x) - rank(y));
+    // 按创建顺序展示（服务端返回即为升序，最新添加在最后），配合分页。
+    totalPages() { return Math.max(1, Math.ceil(this.accounts.length / this.pageSize)); },
+    pagedAccounts() {
+      const start = (this.page - 1) * this.pageSize;
+      return this.accounts.slice(start, start + this.pageSize);
+    },
+    infoRows() {
+      const a = this.infoAcc;
+      if (!a) return [];
+      const rows = [
+        { k: '账号', v: a.account || '—' },
+        { k: '密码', v: a.password || '—' },
+        { k: '辅助邮箱', v: a.auxEmail || '—' },
+        { k: '工作空间 ID', v: a.workspaceID || '—' },
+        { k: 'Auth', v: a.hasAuth ? a.auth : '未配置', cls: a.hasAuth ? 'text-ink' : 'text-mute' },
+        { k: 'API Key', v: a.hasKey ? a.apiKey : '未配置', cls: a.hasKey ? 'text-ink' : 'text-mute' },
+        { k: '状态', v: a.status },
+        { k: '页面登录', v: a.reportEmail || '—' },
+        { k: '到期时间', v: a.expiresAt ? this.fmtDate(a.expiresAt) : '—' },
+        { k: '剩余', v: a.expiresAt ? (a.expiresIn > 0 ? OC.fmtDur(a.expiresIn) : '已到期') : '—' },
+        { k: '最后抓取', v: a.lastChecked ? this.fmtDate(a.lastChecked) : '尚未抓取' },
+        { k: '转发次数', v: String(a.proxyCount) },
+      ];
+      if (a.error) rows.push({ k: '错误', v: a.error, cls: 'text-danger' });
+      return rows;
     },
     stats() {
       const a = this.accounts;
@@ -40,6 +65,35 @@ createApp({
     async load() {
       this.accounts = await OC.api('/api/accounts');
       this.lastSync = new Date().toISOString();
+      if (this.page > this.totalPages) this.page = this.totalPages;
+    },
+    openMenu(e, a) {
+      this.menu = {
+        show: true, acc: a,
+        x: Math.min(e.clientX, window.innerWidth - 150),
+        y: Math.min(e.clientY, window.innerHeight - 210),
+      };
+    },
+    menuAction(kind) {
+      const a = this.menu.acc; this.menu.show = false;
+      if (kind === 'refresh') this.refreshOne(a);
+      else if (kind === 'info') this.openInfo(a);
+      else if (kind === 'auth') this.editField(a, 'auth', 'Auth（Cookie 头）');
+      else if (kind === 'key') this.editField(a, 'apiKey', 'API Key');
+      else if (kind === 'del') this.del(a);
+    },
+    openInfo(a) { this.infoAcc = a; },
+    expiryLabel(a) {
+      if (!a.expiresAt) return '';
+      if (a.expiresIn <= 0) return '已到期';
+      const d = Math.floor(a.expiresIn / 86400);
+      return d >= 1 ? d + '天' : Math.max(1, Math.floor(a.expiresIn / 3600)) + '小时';
+    },
+    expiryBadgeCls(a) {
+      if (!a.expiresAt) return 'bg-canvas-soft text-mute';
+      if (a.expiresIn <= 0) return 'bg-danger/15 text-danger';
+      if (this.soon(a)) return 'bg-warn/15 text-warn';
+      return 'bg-canvas-soft text-mute';
     },
     async loadSettings() {
       try { this.settings = await OC.api('/api/settings'); } catch (e) {}
@@ -110,7 +164,6 @@ createApp({
     pctText(u) { return this.pctTextN(u ? u.usagePercent : null); },
     barClsN(p) { if (p == null) return 'bg-hairline'; if (p >= 100) return 'bg-danger'; if (p >= this.settings.warnPercent) return 'bg-warn'; return 'bg-primary'; },
     pctTextN(p) { if (p == null) return 'text-mute'; if (p >= 100) return 'text-danger'; if (p >= this.settings.warnPercent) return 'text-warn'; return 'text-body'; },
-    expiryCls(a) { if (!a.expiresAt) return 'text-mute'; if (a.expiresIn <= 0) return 'text-danger'; if (this.soon(a)) return 'text-warn'; return 'text-ink'; },
     tabCls(on) { return on ? 'bg-primary text-canvas' : 'text-body hover:text-ink'; },
     flash(m) { this.msg = m; clearTimeout(this._t); this._t = setTimeout(() => this.msg = '', 4000); },
     wait(ms) { return new Promise(r => setTimeout(r, ms)); },
