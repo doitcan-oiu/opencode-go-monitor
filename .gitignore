@@ -1,0 +1,9 @@
+# 运行时数据（含明文密码 / Auth，切勿提交）
+/data/
+*.db
+*.db-shm
+*.db-wal
+
+# 编译产物
+/monitor
+/opencode-monitor
