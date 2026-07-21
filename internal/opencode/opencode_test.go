@@ -17,6 +17,11 @@ $R[28]($R[18], $R[33] = {
     monthlyUsage: $R[37] = { status: "ok", resetInSec: 2348518, usagePercent: 50 }
 });
 您已订阅 OpenCode Go。 liteSubscriptionID: "sub_1Tti5R2StuRr0lbXWnemfM01"
+<div data-slot="referrals-table"><table data-slot="referrals-table-element"><tbody>
+<tr data-status="available" data-source="inviter"><td>$5</td><td><button type="button">查看奖励</button></td></tr>
+<tr data-status="available" data-source="inviter"><td>$5</td><td><button type="button">查看奖励</button></td></tr>
+<tr data-status="applied" data-source="inviter"><td>$5</td><td><button type="button" disabled="">奖励已使用</button></td></tr>
+</tbody></table></div>
 `
 
 func TestParse(t *testing.T) {
@@ -40,6 +45,9 @@ func TestParse(t *testing.T) {
 	check("monthly", r.Monthly, 2348518, 50)
 	if r.Expiry() != r.Monthly {
 		t.Error("到期依据应为每月")
+	}
+	if r.Unclaimed != 2 {
+		t.Errorf("未领取奖励 = %d, 期望 2", r.Unclaimed)
 	}
 }
 

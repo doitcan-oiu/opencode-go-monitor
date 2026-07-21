@@ -81,6 +81,7 @@
             {{ a.account || a.reportEmail || '未命名账号' }}
           </button>
           <div class="flex shrink-0 items-center gap-1">
+            <span v-if="a.unclaimedRewards > 0" :title="'有 '+a.unclaimedRewards+' 个邀请奖励待领取'" class="rounded-full bg-warn/20 px-2 py-0.5 text-[11px] font-semibold text-warn">🎁 {{ a.unclaimedRewards }}</span>
             <span v-if="a.subscribed" class="rounded-full border border-primary/40 px-1.5 py-0.5 text-[11px] text-primary-soft">已订阅</span>
             <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="health(a).cls">{{ health(a).label }}</span>
             <span v-if="a.expiresAt" class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="expiryBadgeCls(a)">{{ expiryLabel(a) }}</span>

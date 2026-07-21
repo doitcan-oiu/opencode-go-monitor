@@ -50,6 +50,7 @@ createApp({
         { k: '剩余', v: a.expiresAt ? (a.expiresIn > 0 ? OC.fmtDur(a.expiresIn) : '已到期') : '—' },
         { k: '最后抓取', v: a.lastChecked ? this.fmtDate(a.lastChecked) : '尚未抓取' },
         { k: '转发次数', v: String(a.proxyCount) },
+        { k: '待领取奖励', v: a.unclaimedRewards > 0 ? a.unclaimedRewards + ' 个' : '无', cls: a.unclaimedRewards > 0 ? 'text-warn' : 'text-mute' },
       ];
       if (a.error) rows.push({ k: '错误', v: a.error, cls: 'text-danger' });
       return rows;

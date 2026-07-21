@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS accounts (
   expires_at   TEXT,
   last_checked TEXT,
   proxy_count  INTEGER NOT NULL DEFAULT 0,
+  unclaimed_rewards INTEGER NOT NULL DEFAULT 0,
   created_at   TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS models (
@@ -52,6 +53,7 @@ CREATE TABLE IF NOT EXISTS settings (
 var migrations = []string{
 	`ALTER TABLE accounts ADD COLUMN api_key TEXT NOT NULL DEFAULT ''`,
 	`ALTER TABLE accounts ADD COLUMN proxy_count INTEGER NOT NULL DEFAULT 0`,
+	`ALTER TABLE accounts ADD COLUMN unclaimed_rewards INTEGER NOT NULL DEFAULT 0`,
 }
 
 type Store struct {
@@ -89,7 +91,7 @@ func (s *Store) Close() error { return s.db.Close() }
 
 const accountCols = `id, account, password, aux_email, workspace_id, auth, api_key,
 	status, error, report_email, subscribed, rolling, weekly, monthly,
-	expires_at, last_checked, proxy_count, created_at`
+	expires_at, last_checked, proxy_count, unclaimed_rewards, created_at`
 
 func (s *Store) All() ([]*Account, error) {
 	rows, err := s.db.Query(`SELECT ` + accountCols + ` FROM accounts ORDER BY created_at`)
@@ -128,11 +130,11 @@ func (s *Store) Add(a *Account) error {
 		a.CreatedAt = time.Now()
 	}
 	_, err := s.db.Exec(`INSERT INTO accounts (`+accountCols+`)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		a.ID, a.Account, a.Password, a.AuxEmail, a.WorkspaceID, a.Auth, a.APIKey,
 		a.Status, a.Error, a.ReportEmail, boolInt(a.Subscribed),
 		usageJSON(a.Rolling), usageJSON(a.Weekly), usageJSON(a.Monthly),
-		timeStr(a.ExpiresAt), timeStr(a.LastChecked), a.ProxyCount, a.CreatedAt.Format(time.RFC3339))
+		timeStr(a.ExpiresAt), timeStr(a.LastChecked), a.ProxyCount, a.Unclaimed, a.CreatedAt.Format(time.RFC3339))
 	return err
 }
 
@@ -145,12 +147,12 @@ func (s *Store) Update(id string, fn func(a *Account)) (*Account, error) {
 	_, err = s.db.Exec(`UPDATE accounts SET
 		account=?, password=?, aux_email=?, workspace_id=?, auth=?, api_key=?,
 		status=?, error=?, report_email=?, subscribed=?,
-		rolling=?, weekly=?, monthly=?, expires_at=?, last_checked=?, proxy_count=?
+		rolling=?, weekly=?, monthly=?, expires_at=?, last_checked=?, proxy_count=?, unclaimed_rewards=?
 		WHERE id=?`,
 		a.Account, a.Password, a.AuxEmail, a.WorkspaceID, a.Auth, a.APIKey,
 		a.Status, a.Error, a.ReportEmail, boolInt(a.Subscribed),
 		usageJSON(a.Rolling), usageJSON(a.Weekly), usageJSON(a.Monthly),
-		timeStr(a.ExpiresAt), timeStr(a.LastChecked), a.ProxyCount, a.ID)
+		timeStr(a.ExpiresAt), timeStr(a.LastChecked), a.ProxyCount, a.Unclaimed, a.ID)
 	return a, err
 }
 
@@ -280,7 +282,7 @@ func scanAccount(row scanner) (*Account, error) {
 	)
 	err := row.Scan(&a.ID, &a.Account, &a.Password, &a.AuxEmail, &a.WorkspaceID, &a.Auth, &a.APIKey,
 		&a.Status, &a.Error, &a.ReportEmail, &sub, &rolling, &weekly, &monthly,
-		&expiresAt, &lastChecked, &a.ProxyCount, &create)
+		&expiresAt, &lastChecked, &a.ProxyCount, &a.Unclaimed, &create)
 	if err != nil {
 		return nil, err
 	}

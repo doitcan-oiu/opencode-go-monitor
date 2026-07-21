@@ -28,7 +28,8 @@ type Account struct {
 	Monthly     *Usage     `json:"monthly"`
 	ExpiresAt   *time.Time `json:"expiresAt"`
 	LastChecked *time.Time `json:"lastChecked"`
-	ProxyCount  int64      `json:"proxyCount"` // 作为转发上游被选中的累计次数
+	ProxyCount  int64      `json:"proxyCount"`       // 作为转发上游被选中的累计次数
+	Unclaimed   int        `json:"unclaimedRewards"` // 未领取的邀请奖励数量
 	CreatedAt   time.Time  `json:"createdAt"`
 }
 
@@ -49,38 +50,22 @@ func (a *Account) Expired() bool {
 	return a.ExpiresAt != nil && time.Now().After(*a.ExpiresAt)
 }
 
-// AccountView 是返回给前端的安全视图，剔除密码 / Auth / APIKey 明文。
+// AccountView 是返回给前端的视图。密码 / Auth / APIKey 明文原样返回（供账号信息查看）。
 type AccountView struct {
 	Account
-	Password  string `json:"password"`
-	Auth      string `json:"auth"`
-	APIKey    string `json:"apiKey"`
-	HasAuth   bool   `json:"hasAuth"`
-	HasKey    bool   `json:"hasKey"`
-	ExpiresIn int64  `json:"expiresIn"`
+	HasAuth   bool  `json:"hasAuth"`
+	HasKey    bool  `json:"hasKey"`
+	ExpiresIn int64 `json:"expiresIn"`
 }
 
 func (a *Account) View() AccountView {
 	v := AccountView{Account: *a}
-	v.Password = mask(a.Password)
-	v.Auth = mask(a.Auth)
-	v.APIKey = mask(a.APIKey)
 	v.HasAuth = a.Auth != ""
 	v.HasKey = a.APIKey != ""
 	if a.ExpiresAt != nil {
 		v.ExpiresIn = int64(time.Until(*a.ExpiresAt).Seconds())
 	}
 	return v
-}
-
-func mask(s string) string {
-	if s == "" {
-		return ""
-	}
-	if len(s) <= 4 {
-		return "****"
-	}
-	return s[:2] + "****" + s[len(s)-2:]
 }
 
 // Model 是一个可转发的 opencode Go 模型。

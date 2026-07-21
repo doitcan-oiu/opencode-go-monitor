@@ -33,6 +33,7 @@ func (s *Server) RefreshAccount(id string) (*store.Account, error) {
 		a.Rolling = res.Rolling
 		a.Weekly = res.Weekly
 		a.Monthly = res.Monthly
+		a.Unclaimed = res.Unclaimed
 		// 到期时间 = 抓取时刻 + 最后一档额度的重置秒数。
 		if u := res.Expiry(); u != nil {
 			exp := now.Add(time.Duration(u.ResetInSec) * time.Second)

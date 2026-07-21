@@ -26,6 +26,8 @@ var (
 	rePercent   = regexp.MustCompile(`usagePercent:\s*(-?\d+)`)
 	reUserEmail = regexp.MustCompile(`\$R\[28\]\(\s*\$R\[\d+\]\s*,\s*"([A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+)"\s*\)`)
 	reSubbed    = regexp.MustCompile(`已订阅|subscriptionPlan|liteSubscriptionID`)
+	// 邀请奖励表：每行 data-status="available" 即一个可领取（未领取）的奖励。
+	reReferralAvail = regexp.MustCompile(`data-status="available"`)
 )
 
 // FetchResult 是一次抓取解析后的结果。
@@ -35,6 +37,7 @@ type FetchResult struct {
 	Rolling     *store.Usage
 	Weekly      *store.Usage
 	Monthly     *store.Usage
+	Unclaimed   int // 未领取的邀请奖励数量
 }
 
 // Fetch 请求工作空间 Go 页面并解析额度信息。auth 默认作为 Cookie 头，
@@ -91,6 +94,7 @@ func Parse(html string) *FetchResult {
 		res.ReportEmail = m[1]
 	}
 	res.Subscribed = reSubbed.MatchString(html)
+	res.Unclaimed = len(reReferralAvail.FindAllString(html, -1))
 	return res
 }
 

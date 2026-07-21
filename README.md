@@ -109,6 +109,9 @@ nohup ./monitor > monitor.log 2>&1 &
 从工作空间 Go 页面内嵌数据解析三档额度（滚动 / 每周 / 每月的 `usagePercent` 与 `resetInSec`）。
 **到期时间**（无需手填）取最后一档（优先每月）的重置时刻 = `抓取时间 + resetInSec`，换算为具体日期。
 
+**邀请奖励**：解析页面 `referrals-table` 中 `data-status="available"` 的行数，即**未领取**的邀请奖励
+数量；每次刷新更新，卡片右上角以 `🎁 N` 徽标提示（去 opencode 官网点「查看奖励」领取）。
+
 ## API 一览
 
 账号 `POST/PUT/DELETE /api/accounts[...]`、`POST /api/accounts/bulk`、刷新 `POST /api/[accounts/{id}/]refresh`；
@@ -118,4 +121,4 @@ nohup ./monitor > monitor.log 2>&1 &
 ## 注意
 
 - `data/monitor.db` 含明文密码 / Auth / API Key，已 gitignore，勿提交或放公开机器。
-- 当前转发不做「失败自动换 Key 重试」；如需可后续扩展（需缓存请求体以便重放）。
+- 账号信息弹窗按需**明文展示**密码 / Auth / API Key，请仅在可信内网使用本工具。
