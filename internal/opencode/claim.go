@@ -102,14 +102,19 @@ func ClaimReferral(workspaceID, auth string, index int, ref store.Referral, time
 		wait := page.MustWaitRequestIdle()
 		useBtn.MustClick()
 		wait()
-		page.MustWaitStable()
 
-		// 复核该行是否已变为 applied（领取成功）。
-		fresh := page.MustElements(selReferralRows)
-		if index < len(fresh) {
-			if s := fresh[index].MustEval(`() => this.getAttribute('data-status')`).Str(); s != "applied" {
-				claimErr = fmt.Errorf("已点击「使用」但页面状态未变为已使用（当前：%s），请刷新确认", s)
+		// 领取（Server Action）后页面会重渲染，DOM 翻成 applied 有延迟：
+		// 轮询等最多约 6s 看该行是否变为 applied。翻了即确认成功；
+		// 没翻也不视为失败——真正的结果由服务端随后重新抓取额度来体现，
+		// 这里强行报错只会在实际已领取时造成假失败。
+		for i := 0; i < 12; i++ {
+			fresh := page.MustElements(selReferralRows)
+			if index < len(fresh) &&
+				fresh[index].MustEval(`() => this.getAttribute('data-status')`).Str() == "applied" {
+				break
 			}
+			page.MustWaitIdle()
+			time.Sleep(500 * time.Millisecond)
 		}
 	})
 	if runErr != nil {
