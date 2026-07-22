@@ -149,16 +149,6 @@ func stripTags(s string) string {
 	return strings.TrimSpace(reTag.ReplaceAllString(s, ""))
 }
 
-// ClaimReferral 领取（使用）指定的邀请奖励。
-//
-// opencode 的「使用」按钮是 Next.js Server Action：点击后向工作空间页面 URL
-// 发起 POST，携带 `Next-Action: <hash>` 头，参数经 RSC 编码为函数入参；该 hash
-// 位于站点前端 JS bundle 中，无法从页面 HTML 推导。待抓取到真实的「使用」网络
-// 请求（方法 / URL / 头 / 请求体）后在此实现。
-func ClaimReferral(workspaceID, auth string, index int, ref store.Referral, timeout time.Duration) error {
-	return fmt.Errorf("领取功能尚未接入：需要 opencode「使用」按钮的网络请求（Next-Action 头与请求体）才能实现")
-}
-
 // Expiry 返回作为「到期依据」的额度维度（优先每月，其次每周、滚动）。
 func (r *FetchResult) Expiry() *store.Usage {
 	if r.Monthly != nil {

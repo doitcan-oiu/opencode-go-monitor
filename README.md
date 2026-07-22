@@ -111,7 +111,11 @@ nohup ./monitor > monitor.log 2>&1 &
 
 **邀请奖励**：解析页面 `referrals-table` 每一行（金额 / 描述 / 日期 / 状态），`data-status="available"`
 即**未领取**。卡片右上角 `🎁 N` 徽标显示待领取数量，**点击徽标**弹出奖励明细列表；可领取项有「领取」按钮。
-> 领取动作是 opencode 的 Next.js Server Action，需抓取其「使用」按钮的真实网络请求后接入（见 `opencode.ClaimReferral`）。
+
+**领取**：opencode 的「使用」按钮是 Next.js Server Action，签名藏在前端 JS 中、无法从 HTML 推导，
+因此领取用**无头浏览器**（`go-rod`）复刻：带账号登录态打开页面 → 点「查看奖励」→ 点「使用」，
+完全模拟人工点击（见 `opencode.ClaimReferral`）。**首次领取**若本机没有 Chromium，rod 会自动下载
+一份（约 150MB）到用户缓存目录，故第一次会较慢；之后正常。领取不可逆，仅在你手动点「领取」时触发。
 
 ## API 一览
 
