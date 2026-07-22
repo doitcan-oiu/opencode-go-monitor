@@ -38,13 +38,20 @@ func ClaimReferral(workspaceID, auth string, index int, ref store.Referral, time
 	}
 
 	// 找到（或自动下载）Chromium 并启动无头实例。
-	l := launcher.New().Headless(true)
+	// no-sandbox：以 root 或容器内运行时 Chromium 会拒绝开启 sandbox；
+	// disable-dev-shm-usage / disable-gpu：容器内 /dev/shm 偏小、无 GPU。
+	l := launcher.New().Headless(true).
+		Set("no-sandbox").
+		Set("disable-gpu").
+		Set("disable-dev-shm-usage")
 	if path, ok := launcher.LookPath(); ok {
 		l = l.Bin(path)
 	}
 	controlURL, err := l.Launch()
 	if err != nil {
-		return fmt.Errorf("启动无头浏览器失败：%w（首次运行需联网下载 Chromium）", err)
+		return fmt.Errorf("启动无头浏览器失败：%w\n"+
+			"多为缺少系统库（如 libatk-1.0.so.0）或以 root 运行 sandbox 受限。"+
+			"Debian/Ubuntu 可执行：apt-get install -y chromium（会带齐依赖库）", err)
 	}
 	defer l.Cleanup()
 
