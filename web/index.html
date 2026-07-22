@@ -17,6 +17,24 @@
     body { background: var(--color-canvas); color: var(--color-ink); }
     ::selection { background: rgba(0,217,146,.25); }
     [v-cloak] { display: none; }
+
+    /* 美化滚动条：暗色细滚动条，与主题统一 */
+    * { scrollbar-width: thin; scrollbar-color: #2e2b2a transparent; }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #2a2726; border-radius: 9999px; border: 2px solid var(--color-canvas); }
+    ::-webkit-scrollbar-thumb:hover { background: #46413f; }
+
+    /* 动画关键帧 */
+    @keyframes ocFade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes ocPop  { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
+    @keyframes ocShine { 0% { transform: translateX(-100%); } 60%, 100% { transform: translateX(320%); } }
+    .oc-overlay { animation: ocFade .18s ease-out; }
+    .oc-pop { animation: ocPop .22s cubic-bezier(.2,.8,.2,1); }
+    @media (prefers-reduced-motion: reduce) {
+      .oc-overlay, .oc-pop, .oc-bar { animation: none !important; }
+      .oc-card { transition: none !important; }
+    }
   </style>
   <script src="/static/common.js"></script>
 </head>
@@ -24,25 +42,25 @@
 <div id="app" v-cloak>
   <!-- 顶部导航 -->
   <header class="sticky top-0 z-20 border-b border-hairline bg-canvas/95 backdrop-blur">
-    <div class="mx-auto max-w-7xl px-6">
-      <div class="flex items-center justify-between py-3">
-        <div class="flex items-center gap-5">
-          <div class="flex items-center gap-3">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6">
+      <div class="flex flex-wrap items-center justify-between gap-y-2 py-3">
+        <div class="flex items-center gap-3 sm:gap-5">
+          <div class="flex items-center gap-2 sm:gap-3">
             <span class="grid size-6 place-items-center border-2 border-primary text-primary text-xs font-bold">◨</span>
             <div class="text-sm font-semibold text-ink-strong">opencode Go 监控</div>
           </div>
           <nav class="flex items-center gap-1 text-sm">
-            <a href="/" class="rounded-sm bg-canvas-soft px-3 py-1.5 font-semibold text-ink">监控</a>
-            <a href="/settings" class="rounded-sm px-3 py-1.5 text-body hover:text-ink">设置</a>
+            <a href="/" class="cursor-pointer rounded-sm bg-canvas-soft px-3 py-1.5 font-semibold text-ink transition">监控</a>
+            <a href="/settings" class="cursor-pointer rounded-sm px-3 py-1.5 text-body transition hover:text-ink">设置</a>
           </nav>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 sm:gap-3">
           <span class="hidden text-xs text-mute sm:inline"><span v-if="lastSync">更新于 {{ fmtClock(lastSync) }}</span></span>
           <button @click="refreshAll" :disabled="refreshing"
-            class="rounded-sm border border-hairline bg-canvas px-4 py-2 text-sm font-semibold text-ink hover:border-mute disabled:opacity-50">
+            class="cursor-pointer rounded-sm border border-hairline bg-canvas px-3 py-2 text-sm font-semibold text-ink transition hover:border-mute active:scale-95 disabled:opacity-50 sm:px-4">
             {{ refreshing ? '刷新中…' : '刷新全部' }}
           </button>
-          <button @click="openAdd" class="rounded-sm bg-primary px-4 py-2 text-sm font-semibold text-canvas hover:bg-primary-soft">+ 添加账号</button>
+          <button @click="openAdd" class="cursor-pointer rounded-sm bg-primary px-3 py-2 text-sm font-semibold text-canvas transition hover:bg-primary-soft active:scale-95 sm:px-4">+ 添加账号</button>
         </div>
       </div>
       <!-- 统计 + 总额度 -->
@@ -58,7 +76,7 @@
           <div v-for="u in aggRows" :key="u.label" class="flex items-center gap-1.5">
             <span class="text-[11px] text-body">{{ u.label }}</span>
             <div class="h-1.5 w-14 overflow-hidden rounded-full bg-canvas-soft">
-              <div class="h-full rounded-full transition-all" :class="barClsN(u.pct)" :style="{ width: (u.pct==null?0:Math.min(u.pct,100)) + '%' }"></div>
+              <div class="oc-bar" :class="barClsN(u.pct)" :style="{ width: (barReady ? (u.pct==null?0:Math.min(u.pct,100)) : 0) + '%' }"></div>
             </div>
             <span class="w-8 font-mono text-[11px]" :class="pctTextN(u.pct)">{{ u.pct==null ? '—' : u.pct + '%' }}</span>
           </div>
@@ -67,16 +85,34 @@
     </div>
   </header>
 
-  <main class="mx-auto max-w-7xl px-6 py-6">
-    <div v-if="accounts.length===0" class="rounded-md border border-dashed border-hairline bg-canvas-soft p-12 text-center text-mute">
+  <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+    <!-- 骨架屏：首次加载占位 -->
+    <div v-if="!loaded" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+      <div v-for="n in 8" :key="n" class="oc-card animate-pulse">
+        <div class="oc-skel mb-2 h-4 w-2/3"></div>
+        <div class="mb-3 flex gap-1.5">
+          <div class="oc-skel h-4 w-14 rounded-full"></div>
+          <div class="oc-skel h-4 w-10 rounded-full"></div>
+        </div>
+        <div class="space-y-3">
+          <div class="oc-skel h-1.5 w-full rounded-full"></div>
+          <div class="oc-skel h-1.5 w-full rounded-full"></div>
+          <div class="oc-skel h-1.5 w-full rounded-full"></div>
+        </div>
+      </div>
+    </div>
+
+    <div v-else-if="accounts.length===0" class="rounded-md border border-dashed border-hairline bg-canvas-soft p-12 text-center text-mute">
       还没有账号，点击右上角「添加账号」开始监控。
     </div>
 
-    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+    <div v-else class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
       <article v-for="a in pagedAccounts" :key="a.id" @contextmenu.prevent="openMenu($event, a)"
-        class="flex flex-col rounded-md border bg-canvas p-4" :class="a.status==='error' ? 'border-danger/40' : 'border-hairline'">
+        class="oc-card group" :class="a.status==='error' ? 'oc-card--error' : ''">
+        <!-- 悬浮提示：右键操作 -->
+        <span class="pointer-events-none absolute right-2.5 top-2.5 rounded-full bg-canvas-soft/90 px-2 py-0.5 text-[10px] text-mute opacity-0 transition-opacity duration-200 group-hover:opacity-100">右键操作</span>
         <!-- 顶部：邮箱 -->
-        <button @click="openInfo(a)" :title="a.account" class="mb-2 block w-full truncate text-left text-sm font-semibold text-ink-strong hover:text-primary hover:underline">
+        <button @click="openInfo(a)" :title="a.account" class="mb-2 block w-full cursor-pointer truncate pr-16 text-left text-sm font-semibold text-ink-strong transition-colors hover:text-primary">
           {{ a.account || a.reportEmail || '未命名账号' }}
         </button>
 
@@ -84,7 +120,7 @@
         <div class="mb-3 flex flex-wrap items-center gap-1">
           <button v-if="a.unclaimedRewards > 0 || (a.referrals && a.referrals.length)" @click.stop="openReferrals(a)"
             :title="a.unclaimedRewards > 0 ? '有 '+a.unclaimedRewards+' 个邀请奖励待领取，点击查看' : '查看邀请奖励'"
-            class="rounded-full px-2 py-0.5 text-[11px] font-semibold transition"
+            class="cursor-pointer rounded-full px-2 py-0.5 text-[11px] font-semibold transition active:scale-95"
             :class="a.unclaimedRewards > 0 ? 'bg-warn/20 text-warn hover:bg-warn/30' : 'bg-canvas-soft text-mute hover:text-body'">🎁 {{ a.unclaimedRewards }}</button>
           <span v-if="a.subscribed" class="rounded-full border border-primary/40 px-1.5 py-0.5 text-[11px] text-primary-soft">已订阅</span>
           <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="health(a).cls">{{ health(a).label }}</span>
@@ -98,7 +134,7 @@
               <span class="font-mono" :class="pctText(u.data)">{{ u.data ? u.data.usagePercent + '%' : '—' }}</span>
             </div>
             <div class="h-1.5 w-full overflow-hidden rounded-full bg-canvas-soft">
-              <div class="h-full rounded-full transition-all" :class="barCls(u.data)" :style="{ width: (u.data ? Math.min(u.data.usagePercent,100) : 0) + '%' }"></div>
+              <div class="oc-bar" :class="barCls(u.data)" :style="{ width: (barReady && u.data ? Math.min(u.data.usagePercent,100) : 0) + '%' }"></div>
             </div>
           </div>
         </div>
@@ -133,7 +169,7 @@
   <!-- 右键菜单 -->
   <template v-if="menu.show">
     <div class="fixed inset-0 z-40" @click="menu.show=false" @contextmenu.prevent="menu.show=false"></div>
-    <div class="fixed z-50 w-36 overflow-hidden rounded-md border border-hairline bg-canvas py-1 text-sm shadow-2xl" :style="{ top: menu.y+'px', left: menu.x+'px' }">
+    <div class="oc-pop fixed z-50 w-36 overflow-hidden rounded-md border border-hairline bg-canvas py-1 text-sm shadow-2xl" :style="{ top: menu.y+'px', left: menu.x+'px' }">
       <button @click="menuAction('refresh')" class="block w-full px-3 py-1.5 text-left text-primary-soft hover:bg-canvas-soft">刷新</button>
       <button @click="menuAction('info')" class="block w-full px-3 py-1.5 text-left text-body hover:bg-canvas-soft">账号信息</button>
       <button @click="menuAction('auth')" class="block w-full px-3 py-1.5 text-left text-body hover:bg-canvas-soft">改 Auth</button>
@@ -143,8 +179,8 @@
   </template>
 
   <!-- 账号信息弹窗 -->
-  <div v-if="infoAcc" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:p-10" @click.self="infoAcc=null">
-    <div class="w-full max-w-md rounded-md border border-hairline bg-canvas shadow-2xl ring-1 ring-white/5">
+  <div v-if="infoAcc" class="oc-overlay fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:p-10" @click.self="infoAcc=null">
+    <div class="oc-pop w-full max-w-md rounded-md border border-hairline bg-canvas shadow-2xl ring-1 ring-white/5">
       <div class="flex items-center justify-between border-b border-hairline px-5 py-4">
         <span class="text-sm font-semibold text-ink-strong">账号信息</span>
         <button @click="infoAcc=null" class="text-lg leading-none text-mute hover:text-ink">✕</button>
@@ -163,8 +199,8 @@
   </div>
 
   <!-- 邀请奖励弹窗 -->
-  <div v-if="referralAcc" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:p-10" @click.self="referralAcc=null">
-    <div class="w-full max-w-lg rounded-md border border-hairline bg-canvas shadow-2xl ring-1 ring-white/5">
+  <div v-if="referralAcc" class="oc-overlay fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:p-10" @click.self="referralAcc=null">
+    <div class="oc-pop w-full max-w-lg rounded-md border border-hairline bg-canvas shadow-2xl ring-1 ring-white/5">
       <div class="flex items-center justify-between border-b border-hairline px-5 py-4">
         <span class="text-sm font-semibold text-ink-strong">邀请奖励 · {{ referralAcc.account || referralAcc.reportEmail || '账号' }}</span>
         <button @click="referralAcc=null" class="text-lg leading-none text-mute hover:text-ink">✕</button>
@@ -204,8 +240,8 @@
   <div v-if="msg && !showAdd" class="fixed bottom-6 right-6 z-50 rounded-md border border-hairline bg-canvas px-4 py-3 text-sm text-primary-soft shadow-2xl">{{ msg }}</div>
 
   <!-- 添加账号弹窗 -->
-  <div v-if="showAdd" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:p-10" @click.self="closeAdd">
-    <div class="w-full max-w-2xl rounded-md border border-hairline bg-canvas shadow-2xl ring-1 ring-white/5">
+  <div v-if="showAdd" class="oc-overlay fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:p-10" @click.self="closeAdd">
+    <div class="oc-pop w-full max-w-2xl rounded-md border border-hairline bg-canvas shadow-2xl ring-1 ring-white/5">
       <div class="flex items-center justify-between border-b border-hairline px-5 py-4">
         <span class="text-sm font-semibold text-ink-strong">添加账号</span>
         <button @click="closeAdd" class="text-lg leading-none text-mute hover:text-ink">✕</button>
@@ -248,8 +284,31 @@
 
 <style type="text/tailwindcss">
   @layer components {
-    .oc-input { @apply w-full rounded-sm border border-hairline bg-canvas-soft px-3 py-2 text-sm text-ink outline-none focus:border-primary; }
-    .oc-pg { @apply grid h-9 min-w-9 place-items-center rounded-md border border-hairline bg-canvas px-2.5 text-sm text-body transition hover:border-mute hover:text-ink disabled:pointer-events-none disabled:opacity-40; }
+    .oc-input { @apply w-full rounded-sm border border-hairline bg-canvas-soft px-3 py-2 text-sm text-ink outline-none transition focus:border-primary; }
+    .oc-pg { @apply grid h-9 min-w-9 cursor-pointer place-items-center rounded-md border border-hairline bg-canvas px-2.5 text-sm text-body transition hover:border-mute hover:text-ink disabled:pointer-events-none disabled:opacity-40; }
+
+    /* 账号卡片：默认干净，悬浮上浮 + 主色辉光 ring */
+    .oc-card { @apply relative flex flex-col rounded-md border border-hairline bg-canvas p-4 transition duration-200 ease-out; }
+    .oc-card:hover {
+      @apply -translate-y-0.5 border-primary/70;
+      box-shadow: 0 0 0 1px rgba(0,217,146,.35), 0 14px 30px -16px rgba(0,217,146,.6);
+    }
+    .oc-card--error { @apply border-danger/45; }
+    .oc-card--error:hover {
+      border-color: rgba(255,92,92,.7);
+      box-shadow: 0 0 0 1px rgba(255,92,92,.35), 0 14px 30px -16px rgba(255,92,92,.55);
+    }
+
+    /* 用量条：宽度平滑增长，悬浮卡片时一道微光扫过 */
+    .oc-bar { @apply relative h-full overflow-hidden rounded-full; transition: width .7s cubic-bezier(.2,.8,.2,1); }
+    .oc-bar::after {
+      content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent);
+    }
+    .oc-card:hover .oc-bar::after { animation: ocShine 1.1s ease-out; }
+
+    /* 骨架屏占位块 */
+    .oc-skel { @apply rounded bg-canvas-soft; }
   }
 </style>
 <script src="/static/dashboard.js"></script>

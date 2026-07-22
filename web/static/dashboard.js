@@ -7,6 +7,7 @@ createApp({
       accounts: [], form: emptyForm(), bulkText: '',
       mode: 'single', showAdd: false, busy: false, refreshing: false,
       msg: '', lastSync: null,
+      loaded: false, barReady: false,
       settings: { warnPercent: 80, expirySoonDays: 3 },
       page: 1, pageSize: 24,
       menu: { show: false, x: 0, y: 0, acc: null },
@@ -81,6 +82,7 @@ createApp({
       this.accounts = await OC.api('/api/accounts');
       this.lastSync = new Date().toISOString();
       if (this.page > this.totalPages) this.page = this.totalPages;
+      this.loaded = true;
     },
     openMenu(e, a) {
       this.menu = {
@@ -190,7 +192,12 @@ createApp({
     },
     barCls(u) { return this.barClsN(u ? u.usagePercent : null); },
     pctText(u) { return this.pctTextN(u ? u.usagePercent : null); },
-    barClsN(p) { if (p == null) return 'bg-hairline'; if (p >= 100) return 'bg-danger'; if (p >= this.settings.warnPercent) return 'bg-warn'; return 'bg-primary'; },
+    barClsN(p) {
+      if (p == null) return 'bg-hairline';
+      if (p >= 100) return 'bg-danger shadow-[0_0_8px_rgba(255,92,92,.55)]';
+      if (p >= this.settings.warnPercent) return 'bg-warn shadow-[0_0_8px_rgba(245,183,49,.5)]';
+      return 'bg-primary shadow-[0_0_8px_rgba(0,217,146,.55)]';
+    },
     pctTextN(p) { if (p == null) return 'text-mute'; if (p >= 100) return 'text-danger'; if (p >= this.settings.warnPercent) return 'text-warn'; return 'text-body'; },
     tabCls(on) { return on ? 'bg-primary text-canvas' : 'text-body hover:text-ink'; },
     flash(m) { this.msg = m; clearTimeout(this._t); this._t = setTimeout(() => this.msg = '', 4000); },
@@ -198,7 +205,9 @@ createApp({
   },
   mounted() {
     this.loadSettings();
-    this.load();
+    this.load().then(() => {
+      this.$nextTick(() => setTimeout(() => { this.barReady = true; }, 60));
+    });
     setInterval(() => this.load(), 30000);
   },
 }).mount('#app');

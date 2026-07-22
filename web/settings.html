@@ -17,8 +17,22 @@
     body { background: var(--color-canvas); color: var(--color-ink); }
     ::selection { background: rgba(0,217,146,.25); }
     [v-cloak] { display: none; }
+    /* 细滚动条 */
+    * { scrollbar-width: thin; scrollbar-color: #2e2b2a transparent; }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #2a2726; border-radius: 9999px; border: 2px solid var(--color-canvas); }
+    ::-webkit-scrollbar-thumb:hover { background: #46413f; }
+    /* 弹窗动画 */
+    @keyframes ocFade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes ocPop  { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
+    .oc-overlay { animation: ocFade .18s ease-out; }
+    .oc-pop { animation: ocPop .22s cubic-bezier(.2,.8,.2,1); }
+    @media (prefers-reduced-motion: reduce) {
+      .oc-overlay, .oc-pop { animation: none !important; }
+    }
     @layer components {
-      .oc-input { @apply w-full rounded-sm border border-hairline bg-canvas-soft px-3 py-2 text-sm text-ink outline-none focus:border-primary; }
+      .oc-input { @apply w-full rounded-sm border border-hairline bg-canvas-soft px-3 py-2 text-sm text-ink outline-none transition focus:border-primary; }
     }
   </style>
   <script src="/static/common.js"></script>
@@ -26,14 +40,14 @@
 <body class="min-h-screen antialiased">
 <div id="app" v-cloak>
   <header class="sticky top-0 z-20 border-b border-hairline bg-canvas/95 backdrop-blur">
-    <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
-      <div class="flex items-center gap-5">
-        <div class="flex items-center gap-3">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-y-2 px-4 py-3 sm:px-6">
+      <div class="flex items-center gap-3 sm:gap-5">
+        <div class="flex items-center gap-2 sm:gap-3">
           <span class="grid size-6 place-items-center border-2 border-primary text-primary text-xs font-bold">◨</span>
           <div class="text-sm font-semibold text-ink-strong">opencode Go 监控</div>
         </div>
         <nav class="flex items-center gap-1 text-sm">
-          <a href="/" class="rounded-sm px-3 py-1.5 text-body hover:text-ink">监控</a>
+          <a href="/" class="cursor-pointer rounded-sm px-3 py-1.5 text-body transition hover:text-ink">监控</a>
           <a href="/settings" class="rounded-sm bg-canvas-soft px-3 py-1.5 font-semibold text-ink">设置</a>
         </nav>
       </div>
@@ -41,7 +55,7 @@
     </div>
   </header>
 
-  <main class="mx-auto max-w-7xl space-y-6 px-6 py-8">
+  <main class="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
     <!-- 监控设置 + 转发设置：双栏 -->
     <div class="grid items-start gap-6 lg:grid-cols-2">
       <!-- 监控设置 -->
