@@ -75,27 +75,20 @@
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
       <article v-for="a in pagedAccounts" :key="a.id" @contextmenu.prevent="openMenu($event, a)"
         class="flex flex-col rounded-md border bg-canvas p-4" :class="a.status==='error' ? 'border-danger/40' : 'border-hairline'">
-        <!-- 顶部：邮箱 + 已订阅 / 状态 / 剩余天数 -->
-        <div class="mb-2 flex items-start justify-between gap-2">
-          <button @click="openInfo(a)" :title="a.account" class="min-w-0 truncate text-left text-sm font-semibold text-ink-strong hover:text-primary hover:underline">
-            {{ a.account || a.reportEmail || '未命名账号' }}
-          </button>
-          <div class="flex shrink-0 items-center gap-1">
-            <button v-if="a.referrals && a.referrals.length" @click.stop="openReferrals(a)"
-              :title="a.unclaimedRewards > 0 ? '有 '+a.unclaimedRewards+' 个邀请奖励待领取，点击查看' : '查看邀请奖励'"
-              class="rounded-full px-2 py-0.5 text-[11px] font-semibold transition"
-              :class="a.unclaimedRewards > 0 ? 'bg-warn/20 text-warn hover:bg-warn/30' : 'bg-canvas-soft text-mute hover:text-body'">🎁 {{ a.unclaimedRewards }}</button>
-            <span v-if="a.subscribed" class="rounded-full border border-primary/40 px-1.5 py-0.5 text-[11px] text-primary-soft">已订阅</span>
-            <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="health(a).cls">{{ health(a).label }}</span>
-            <span v-if="a.expiresAt" class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="expiryBadgeCls(a)">{{ expiryLabel(a) }}</span>
-          </div>
-        </div>
+        <!-- 顶部：邮箱 -->
+        <button @click="openInfo(a)" :title="a.account" class="mb-2 block w-full truncate text-left text-sm font-semibold text-ink-strong hover:text-primary hover:underline">
+          {{ a.account || a.reportEmail || '未命名账号' }}
+        </button>
 
-        <!-- Key / 转发次数 / 最后抓取 -->
-        <div class="mb-3 truncate text-[11px]">
-          <span v-if="a.hasKey" class="text-primary-soft">Key ✓ · 转发 {{ a.proxyCount }}</span>
-          <span v-else class="text-mute">无 Key</span>
-          <span v-if="a.lastChecked" class="text-mute"> · 抓取 {{ fmtClock(a.lastChecked) }}</span>
+        <!-- 徽标：邀请奖励 / 已订阅 / 状态 / 剩余天数 -->
+        <div class="mb-3 flex flex-wrap items-center gap-1">
+          <button v-if="a.unclaimedRewards > 0 || (a.referrals && a.referrals.length)" @click.stop="openReferrals(a)"
+            :title="a.unclaimedRewards > 0 ? '有 '+a.unclaimedRewards+' 个邀请奖励待领取，点击查看' : '查看邀请奖励'"
+            class="rounded-full px-2 py-0.5 text-[11px] font-semibold transition"
+            :class="a.unclaimedRewards > 0 ? 'bg-warn/20 text-warn hover:bg-warn/30' : 'bg-canvas-soft text-mute hover:text-body'">🎁 {{ a.unclaimedRewards }}</button>
+          <span v-if="a.subscribed" class="rounded-full border border-primary/40 px-1.5 py-0.5 text-[11px] text-primary-soft">已订阅</span>
+          <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="health(a).cls">{{ health(a).label }}</span>
+          <span v-if="a.expiresAt" class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="expiryBadgeCls(a)">{{ expiryLabel(a) }}</span>
         </div>
 
         <div class="space-y-2">
@@ -177,7 +170,10 @@
         <button @click="referralAcc=null" class="text-lg leading-none text-mute hover:text-ink">✕</button>
       </div>
       <div class="max-h-[60vh] overflow-y-auto p-5">
-        <p class="mb-3 text-xs text-mute">
+        <div v-if="!referralAcc.referrals || !referralAcc.referrals.length" class="rounded-md border border-dashed border-hairline bg-canvas-soft p-6 text-center text-xs text-mute">
+          待领取 <span class="font-mono text-warn">{{ referralAcc.unclaimedRewards }}</span> 条，明细尚未抓取。点下方「刷新」加载。
+        </div>
+        <p v-else class="mb-3 text-xs text-mute">
           共 {{ referralAcc.referrals.length }} 条 · 待领取
           <span class="font-mono text-warn">{{ referralAcc.unclaimedRewards }}</span> 条。
         </p>
