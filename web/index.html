@@ -81,7 +81,10 @@
             {{ a.account || a.reportEmail || '未命名账号' }}
           </button>
           <div class="flex shrink-0 items-center gap-1">
-            <span v-if="a.unclaimedRewards > 0" :title="'有 '+a.unclaimedRewards+' 个邀请奖励待领取'" class="rounded-full bg-warn/20 px-2 py-0.5 text-[11px] font-semibold text-warn">🎁 {{ a.unclaimedRewards }}</span>
+            <button v-if="a.referrals && a.referrals.length" @click.stop="openReferrals(a)"
+              :title="a.unclaimedRewards > 0 ? '有 '+a.unclaimedRewards+' 个邀请奖励待领取，点击查看' : '查看邀请奖励'"
+              class="rounded-full px-2 py-0.5 text-[11px] font-semibold transition"
+              :class="a.unclaimedRewards > 0 ? 'bg-warn/20 text-warn hover:bg-warn/30' : 'bg-canvas-soft text-mute hover:text-body'">🎁 {{ a.unclaimedRewards }}</button>
             <span v-if="a.subscribed" class="rounded-full border border-primary/40 px-1.5 py-0.5 text-[11px] text-primary-soft">已订阅</span>
             <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="health(a).cls">{{ health(a).label }}</span>
             <span v-if="a.expiresAt" class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="expiryBadgeCls(a)">{{ expiryLabel(a) }}</span>
@@ -162,6 +165,41 @@
       <div class="flex justify-end gap-3 border-t border-hairline px-5 py-4">
         <button @click="refreshOne(infoAcc)" class="rounded-sm border border-hairline bg-canvas px-4 py-2 text-sm font-semibold text-ink hover:border-mute">刷新</button>
         <button @click="infoAcc=null" class="rounded-sm bg-primary px-4 py-2 text-sm font-semibold text-canvas hover:bg-primary-soft">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 邀请奖励弹窗 -->
+  <div v-if="referralAcc" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:p-10" @click.self="referralAcc=null">
+    <div class="w-full max-w-lg rounded-md border border-hairline bg-canvas shadow-2xl ring-1 ring-white/5">
+      <div class="flex items-center justify-between border-b border-hairline px-5 py-4">
+        <span class="text-sm font-semibold text-ink-strong">邀请奖励 · {{ referralAcc.account || referralAcc.reportEmail || '账号' }}</span>
+        <button @click="referralAcc=null" class="text-lg leading-none text-mute hover:text-ink">✕</button>
+      </div>
+      <div class="max-h-[60vh] overflow-y-auto p-5">
+        <p class="mb-3 text-xs text-mute">
+          共 {{ referralAcc.referrals.length }} 条 · 待领取
+          <span class="font-mono text-warn">{{ referralAcc.unclaimedRewards }}</span> 条。
+        </p>
+        <div class="space-y-2">
+          <div v-for="(ref, i) in referralAcc.referrals" :key="i"
+            class="flex items-center gap-3 rounded-md border border-hairline bg-canvas-soft px-3 py-2.5">
+            <span class="font-mono text-sm font-semibold text-primary-soft">{{ ref.amount || '—' }}</span>
+            <div class="min-w-0 flex-1">
+              <div class="truncate text-xs text-ink" :title="ref.source">{{ ref.source || '—' }}</div>
+              <div class="text-[11px] text-mute">{{ ref.date || '—' }}</div>
+            </div>
+            <button v-if="ref.status==='available'" @click="claimReferral(referralAcc, ref, i)" :disabled="ref._busy"
+              class="shrink-0 rounded-sm bg-warn px-3 py-1.5 text-xs font-semibold text-canvas hover:opacity-90 disabled:opacity-50">
+              {{ ref._busy ? '领取中…' : '领取' }}
+            </button>
+            <span v-else class="shrink-0 rounded-full bg-canvas px-2 py-0.5 text-[11px] text-mute">已使用</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 border-t border-hairline px-5 py-4">
+        <button @click="refreshOne(referralAcc)" class="rounded-sm border border-hairline bg-canvas px-4 py-2 text-sm font-semibold text-ink hover:border-mute">刷新</button>
+        <button @click="referralAcc=null" class="rounded-sm bg-primary px-4 py-2 text-sm font-semibold text-canvas hover:bg-primary-soft">关闭</button>
       </div>
     </div>
   </div>

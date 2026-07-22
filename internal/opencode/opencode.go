@@ -26,8 +26,17 @@ var (
 	rePercent   = regexp.MustCompile(`usagePercent:\s*(-?\d+)`)
 	reUserEmail = regexp.MustCompile(`\$R\[28\]\(\s*\$R\[\d+\]\s*,\s*"([A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+)"\s*\)`)
 	reSubbed    = regexp.MustCompile(`已订阅|subscriptionPlan|liteSubscriptionID`)
-	// 邀请奖励表：每行 data-status="available" 即一个可领取（未领取）的奖励。
-	reReferralAvail = regexp.MustCompile(`data-status="available"`)
+
+	// 邀请奖励表解析：先框定表区域，再逐行取 data-status / data-source 及各字段。
+	reReferralsTable = regexp.MustCompile(`(?s)data-slot="referrals-table".*?</table>`)
+	reReferralRow    = regexp.MustCompile(`(?s)<tr\s+data-status="[^"]*"[^>]*>.*?</tr>`)
+	reRefStatus      = regexp.MustCompile(`data-status="([^"]*)"`)
+	reRefSource      = regexp.MustCompile(`data-source="([^"]*)"`)
+	reRefAmount      = regexp.MustCompile(`data-slot="referral-amount"[^>]*>\s*([^<]*?)\s*<`)
+	reRefSourceTxt   = regexp.MustCompile(`(?s)data-slot="referral-source"[^>]*>(.*?)</td>`)
+	reRefDateTitle   = regexp.MustCompile(`data-slot="referral-date"[^>]*\btitle="([^"]*)"`)
+	reRefDateText    = regexp.MustCompile(`(?s)data-slot="referral-date"[^>]*>(.*?)</td>`)
+	reTag            = regexp.MustCompile(`<[^>]*>`)
 )
 
 // FetchResult 是一次抓取解析后的结果。
@@ -37,7 +46,8 @@ type FetchResult struct {
 	Rolling     *store.Usage
 	Weekly      *store.Usage
 	Monthly     *store.Usage
-	Unclaimed   int // 未领取的邀请奖励数量
+	Referrals   []store.Referral // 邀请奖励列表
+	Unclaimed   int              // 未领取（status=available）的邀请奖励数量
 }
 
 // Fetch 请求工作空间 Go 页面并解析额度信息。auth 默认作为 Cookie 头，
@@ -94,8 +104,59 @@ func Parse(html string) *FetchResult {
 		res.ReportEmail = m[1]
 	}
 	res.Subscribed = reSubbed.MatchString(html)
-	res.Unclaimed = len(reReferralAvail.FindAllString(html, -1))
+	res.Referrals = parseReferrals(html)
+	for _, r := range res.Referrals {
+		if r.Status == "available" {
+			res.Unclaimed++
+		}
+	}
 	return res
+}
+
+// parseReferrals 从邀请奖励表中解析每一行（金额 / 来源 / 日期 / 状态 / 方向）。
+func parseReferrals(html string) []store.Referral {
+	region := html
+	if m := reReferralsTable.FindString(html); m != "" {
+		region = m
+	}
+	rows := reReferralRow.FindAllString(region, -1)
+	out := make([]store.Referral, 0, len(rows))
+	for _, row := range rows {
+		r := store.Referral{}
+		if m := reRefStatus.FindStringSubmatch(row); m != nil {
+			r.Status = m[1]
+		}
+		if m := reRefSource.FindStringSubmatch(row); m != nil {
+			r.Direction = m[1]
+		}
+		if m := reRefAmount.FindStringSubmatch(row); m != nil {
+			r.Amount = strings.TrimSpace(m[1])
+		}
+		if m := reRefSourceTxt.FindStringSubmatch(row); m != nil {
+			r.Source = stripTags(m[1])
+		}
+		if m := reRefDateTitle.FindStringSubmatch(row); m != nil {
+			r.Date = strings.TrimSpace(m[1])
+		} else if m := reRefDateText.FindStringSubmatch(row); m != nil {
+			r.Date = stripTags(m[1])
+		}
+		out = append(out, r)
+	}
+	return out
+}
+
+func stripTags(s string) string {
+	return strings.TrimSpace(reTag.ReplaceAllString(s, ""))
+}
+
+// ClaimReferral 领取（使用）指定的邀请奖励。
+//
+// opencode 的「使用」按钮是 Next.js Server Action：点击后向工作空间页面 URL
+// 发起 POST，携带 `Next-Action: <hash>` 头，参数经 RSC 编码为函数入参；该 hash
+// 位于站点前端 JS bundle 中，无法从页面 HTML 推导。待抓取到真实的「使用」网络
+// 请求（方法 / URL / 头 / 请求体）后在此实现。
+func ClaimReferral(workspaceID, auth string, index int, ref store.Referral, timeout time.Duration) error {
+	return fmt.Errorf("领取功能尚未接入：需要 opencode「使用」按钮的网络请求（Next-Action 头与请求体）才能实现")
 }
 
 // Expiry 返回作为「到期依据」的额度维度（优先每月，其次每周、滚动）。

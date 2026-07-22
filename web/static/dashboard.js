@@ -10,7 +10,7 @@ createApp({
       settings: { warnPercent: 80, expirySoonDays: 3 },
       page: 1, pageSize: 24,
       menu: { show: false, x: 0, y: 0, acc: null },
-      infoAcc: null,
+      infoAcc: null, referralAcc: null,
     };
   },
   computed: {
@@ -98,6 +98,19 @@ createApp({
       else if (kind === 'del') this.del(a);
     },
     openInfo(a) { this.infoAcc = a; },
+    openReferrals(a) { this.referralAcc = a; },
+    async claimReferral(a, ref, idx) {
+      if (ref._busy) return;
+      ref._busy = true;
+      try {
+        const updated = await OC.api('/api/accounts/' + a.id + '/referrals/claim', OC.json('POST', { index: idx }));
+        Object.assign(a, updated);
+        this.referralAcc = a; // 用刷新后的数据重渲染列表
+        this.flash('已领取奖励');
+      } catch (e) {
+        this.flash('领取失败：' + e.message);
+      } finally { ref._busy = false; }
+    },
     expiryLabel(a) {
       if (!a.expiresAt) return '';
       if (a.expiresIn <= 0) return '已到期';

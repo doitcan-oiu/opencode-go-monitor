@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS accounts (
   last_checked TEXT,
   proxy_count  INTEGER NOT NULL DEFAULT 0,
   unclaimed_rewards INTEGER NOT NULL DEFAULT 0,
+  referrals    TEXT,
   created_at   TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS models (
@@ -54,6 +55,7 @@ var migrations = []string{
 	`ALTER TABLE accounts ADD COLUMN api_key TEXT NOT NULL DEFAULT ''`,
 	`ALTER TABLE accounts ADD COLUMN proxy_count INTEGER NOT NULL DEFAULT 0`,
 	`ALTER TABLE accounts ADD COLUMN unclaimed_rewards INTEGER NOT NULL DEFAULT 0`,
+	`ALTER TABLE accounts ADD COLUMN referrals TEXT`,
 }
 
 type Store struct {
@@ -91,7 +93,7 @@ func (s *Store) Close() error { return s.db.Close() }
 
 const accountCols = `id, account, password, aux_email, workspace_id, auth, api_key,
 	status, error, report_email, subscribed, rolling, weekly, monthly,
-	expires_at, last_checked, proxy_count, unclaimed_rewards, created_at`
+	expires_at, last_checked, proxy_count, unclaimed_rewards, referrals, created_at`
 
 func (s *Store) All() ([]*Account, error) {
 	rows, err := s.db.Query(`SELECT ` + accountCols + ` FROM accounts ORDER BY created_at`)
@@ -130,11 +132,12 @@ func (s *Store) Add(a *Account) error {
 		a.CreatedAt = time.Now()
 	}
 	_, err := s.db.Exec(`INSERT INTO accounts (`+accountCols+`)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		a.ID, a.Account, a.Password, a.AuxEmail, a.WorkspaceID, a.Auth, a.APIKey,
 		a.Status, a.Error, a.ReportEmail, boolInt(a.Subscribed),
 		usageJSON(a.Rolling), usageJSON(a.Weekly), usageJSON(a.Monthly),
-		timeStr(a.ExpiresAt), timeStr(a.LastChecked), a.ProxyCount, a.Unclaimed, a.CreatedAt.Format(time.RFC3339))
+		timeStr(a.ExpiresAt), timeStr(a.LastChecked), a.ProxyCount, a.Unclaimed,
+		referralsJSON(a.Referrals), a.CreatedAt.Format(time.RFC3339))
 	return err
 }
 
@@ -147,12 +150,13 @@ func (s *Store) Update(id string, fn func(a *Account)) (*Account, error) {
 	_, err = s.db.Exec(`UPDATE accounts SET
 		account=?, password=?, aux_email=?, workspace_id=?, auth=?, api_key=?,
 		status=?, error=?, report_email=?, subscribed=?,
-		rolling=?, weekly=?, monthly=?, expires_at=?, last_checked=?, proxy_count=?, unclaimed_rewards=?
+		rolling=?, weekly=?, monthly=?, expires_at=?, last_checked=?, proxy_count=?, unclaimed_rewards=?, referrals=?
 		WHERE id=?`,
 		a.Account, a.Password, a.AuxEmail, a.WorkspaceID, a.Auth, a.APIKey,
 		a.Status, a.Error, a.ReportEmail, boolInt(a.Subscribed),
 		usageJSON(a.Rolling), usageJSON(a.Weekly), usageJSON(a.Monthly),
-		timeStr(a.ExpiresAt), timeStr(a.LastChecked), a.ProxyCount, a.Unclaimed, a.ID)
+		timeStr(a.ExpiresAt), timeStr(a.LastChecked), a.ProxyCount, a.Unclaimed,
+		referralsJSON(a.Referrals), a.ID)
 	return a, err
 }
 
@@ -278,11 +282,12 @@ func scanAccount(row scanner) (*Account, error) {
 		a                              Account
 		sub                            int
 		rolling, weekly, monthly       sql.NullString
+		referrals                      sql.NullString
 		expiresAt, lastChecked, create sql.NullString
 	)
 	err := row.Scan(&a.ID, &a.Account, &a.Password, &a.AuxEmail, &a.WorkspaceID, &a.Auth, &a.APIKey,
 		&a.Status, &a.Error, &a.ReportEmail, &sub, &rolling, &weekly, &monthly,
-		&expiresAt, &lastChecked, &a.ProxyCount, &a.Unclaimed, &create)
+		&expiresAt, &lastChecked, &a.ProxyCount, &a.Unclaimed, &referrals, &create)
 	if err != nil {
 		return nil, err
 	}
@@ -290,6 +295,7 @@ func scanAccount(row scanner) (*Account, error) {
 	a.Rolling = parseUsage(rolling)
 	a.Weekly = parseUsage(weekly)
 	a.Monthly = parseUsage(monthly)
+	a.Referrals = parseReferralsCol(referrals)
 	a.ExpiresAt = parseTime(expiresAt)
 	a.LastChecked = parseTime(lastChecked)
 	if create.Valid {
@@ -317,6 +323,25 @@ func parseUsage(ns sql.NullString) *Usage {
 		return nil
 	}
 	return &u
+}
+
+func referralsJSON(rs []Referral) any {
+	if len(rs) == 0 {
+		return nil
+	}
+	b, _ := json.Marshal(rs)
+	return string(b)
+}
+
+func parseReferralsCol(ns sql.NullString) []Referral {
+	if !ns.Valid || ns.String == "" {
+		return nil
+	}
+	var rs []Referral
+	if json.Unmarshal([]byte(ns.String), &rs) != nil {
+		return nil
+	}
+	return rs
 }
 
 func timeStr(t *time.Time) any {

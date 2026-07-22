@@ -109,8 +109,9 @@ nohup ./monitor > monitor.log 2>&1 &
 从工作空间 Go 页面内嵌数据解析三档额度（滚动 / 每周 / 每月的 `usagePercent` 与 `resetInSec`）。
 **到期时间**（无需手填）取最后一档（优先每月）的重置时刻 = `抓取时间 + resetInSec`，换算为具体日期。
 
-**邀请奖励**：解析页面 `referrals-table` 中 `data-status="available"` 的行数，即**未领取**的邀请奖励
-数量；每次刷新更新，卡片右上角以 `🎁 N` 徽标提示（去 opencode 官网点「查看奖励」领取）。
+**邀请奖励**：解析页面 `referrals-table` 每一行（金额 / 描述 / 日期 / 状态），`data-status="available"`
+即**未领取**。卡片右上角 `🎁 N` 徽标显示待领取数量，**点击徽标**弹出奖励明细列表；可领取项有「领取」按钮。
+> 领取动作是 opencode 的 Next.js Server Action，需抓取其「使用」按钮的真实网络请求后接入（见 `opencode.ClaimReferral`）。
 
 ## API 一览
 

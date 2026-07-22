@@ -9,6 +9,15 @@ type Usage struct {
 	UsagePercent int    `json:"usagePercent"`
 }
 
+// Referral 是一条邀请奖励记录。
+type Referral struct {
+	Amount    string `json:"amount"`    // 金额，如 $5
+	Source    string `json:"source"`    // 描述，如「已邀请 x@y.us」/「由 x@y.us 邀请」
+	Date      string `json:"date"`      // 日期文案
+	Status    string `json:"status"`    // available（可领取）| applied（已使用）
+	Direction string `json:"direction"` // inviter | invitee
+}
+
 // Account 是一个被监控的 opencode 账号。
 type Account struct {
 	ID          string `json:"id"`
@@ -30,6 +39,7 @@ type Account struct {
 	LastChecked *time.Time `json:"lastChecked"`
 	ProxyCount  int64      `json:"proxyCount"`       // 作为转发上游被选中的累计次数
 	Unclaimed   int        `json:"unclaimedRewards"` // 未领取的邀请奖励数量
+	Referrals   []Referral `json:"referrals"`        // 邀请奖励明细
 	CreatedAt   time.Time  `json:"createdAt"`
 }
 

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"opencode-monitor/internal/opencode"
 	"opencode-monitor/internal/proxy"
 	"opencode-monitor/internal/store"
 	"opencode-monitor/web"
@@ -39,6 +40,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PUT /api/accounts/{id}", s.handleUpdate)
 	mux.HandleFunc("DELETE /api/accounts/{id}", s.handleDelete)
 	mux.HandleFunc("POST /api/accounts/{id}/refresh", s.handleRefreshOne)
+	mux.HandleFunc("POST /api/accounts/{id}/referrals/claim", s.handleClaimReferral)
 	mux.HandleFunc("POST /api/refresh", s.handleRefreshAll)
 	mux.HandleFunc("GET /api/settings", s.handleGetSettings)
 	mux.HandleFunc("PUT /api/settings", s.handlePutSettings)
@@ -185,6 +187,43 @@ func (s *Server) handleRefreshOne(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, acc.View())
+}
+
+// handleClaimReferral 领取账号的第 index 条邀请奖励（须为 available），成功后刷新账号。
+func (s *Server) handleClaimReferral(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Index int `json:"index"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		http.Error(w, "无效请求", 400)
+		return
+	}
+	acc, err := s.store.Get(r.PathValue("id"))
+	if err != nil {
+		httpErr(w, err)
+		return
+	}
+	if in.Index < 0 || in.Index >= len(acc.Referrals) {
+		http.Error(w, "奖励序号超出范围", 400)
+		return
+	}
+	ref := acc.Referrals[in.Index]
+	if ref.Status != "available" {
+		http.Error(w, "该奖励不可领取（可能已使用）", 409)
+		return
+	}
+	timeout := parseDur(s.store.GetSettings().RequestTimeout, 25*time.Second)
+	if err := opencode.ClaimReferral(acc.WorkspaceID, acc.Auth, in.Index, ref, timeout); err != nil {
+		http.Error(w, err.Error(), 502)
+		return
+	}
+	// 领取成功后重新抓取，刷新剩余可领取数量与用量。
+	updated, err := s.RefreshAccount(acc.ID)
+	if err != nil {
+		writeJSON(w, acc.View())
+		return
+	}
+	writeJSON(w, updated.View())
 }
 
 func (s *Server) handleRefreshAll(w http.ResponseWriter, r *http.Request) {

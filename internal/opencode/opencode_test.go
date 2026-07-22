@@ -17,10 +17,10 @@ $R[28]($R[18], $R[33] = {
     monthlyUsage: $R[37] = { status: "ok", resetInSec: 2348518, usagePercent: 50 }
 });
 您已订阅 OpenCode Go。 liteSubscriptionID: "sub_1Tti5R2StuRr0lbXWnemfM01"
-<div data-slot="referrals-table"><table data-slot="referrals-table-element"><tbody>
-<tr data-status="available" data-source="inviter"><td>$5</td><td><button type="button">查看奖励</button></td></tr>
-<tr data-status="available" data-source="inviter"><td>$5</td><td><button type="button">查看奖励</button></td></tr>
-<tr data-status="applied" data-source="inviter"><td>$5</td><td><button type="button" disabled="">奖励已使用</button></td></tr>
+<div data-slot="referrals-table"><table data-slot="referrals-table-element"><thead><tr><th>奖励</th><th>描述</th><th>日期</th><th></th></tr></thead><tbody>
+<tr data-status="available" data-source="inviter"><td data-slot="referral-amount">$5</td><td data-slot="referral-source">已邀请 w6rwq23cmb@harvinton.us</td><td data-slot="referral-date" title="2026年7月22日">2026年7月22日</td><td data-slot="referral-action"><button type="button">查看奖励</button></td></tr>
+<tr data-status="available" data-source="invitee"><td data-slot="referral-amount">$5</td><td data-slot="referral-source">由 zwqn9kx@briarst.us 邀请</td><td data-slot="referral-date" title="2026年7月20日">2026年7月20日</td><td data-slot="referral-action"><button type="button">查看奖励</button></td></tr>
+<tr data-status="applied" data-source="inviter"><td data-slot="referral-amount">$5</td><td data-slot="referral-source">已邀请 ty9ke20xv0g2@harvinton.us</td><td data-slot="referral-date" title="2026年7月18日">2026年7月18日</td><td data-slot="referral-action"><button type="button" disabled="">奖励已使用</button></td></tr>
 </tbody></table></div>
 `
 
@@ -48,6 +48,17 @@ func TestParse(t *testing.T) {
 	}
 	if r.Unclaimed != 2 {
 		t.Errorf("未领取奖励 = %d, 期望 2", r.Unclaimed)
+	}
+	if len(r.Referrals) != 3 {
+		t.Fatalf("邀请奖励行数 = %d, 期望 3", len(r.Referrals))
+	}
+	r0 := r.Referrals[0]
+	if r0.Status != "available" || r0.Direction != "inviter" || r0.Amount != "$5" ||
+		r0.Source != "已邀请 w6rwq23cmb@harvinton.us" || r0.Date != "2026年7月22日" {
+		t.Errorf("第一条奖励解析错误: %+v", r0)
+	}
+	if r.Referrals[2].Status != "applied" {
+		t.Errorf("第三条应为 applied, 实为 %q", r.Referrals[2].Status)
 	}
 }
 
