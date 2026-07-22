@@ -17,10 +17,10 @@ $R[28]($R[18], $R[33] = {
     monthlyUsage: $R[37] = { status: "ok", resetInSec: 2348518, usagePercent: 50 }
 });
 您已订阅 OpenCode Go。 liteSubscriptionID: "sub_1Tti5R2StuRr0lbXWnemfM01"
-<div data-slot="referrals-table"><table data-slot="referrals-table-element"><thead><tr><th>奖励</th><th>描述</th><th>日期</th><th></th></tr></thead><tbody>
-<tr data-status="available" data-source="inviter"><td data-slot="referral-amount">$5</td><td data-slot="referral-source">已邀请 w6rwq23cmb@harvinton.us</td><td data-slot="referral-date" title="2026年7月22日">2026年7月22日</td><td data-slot="referral-action"><button type="button">查看奖励</button></td></tr>
-<tr data-status="available" data-source="invitee"><td data-slot="referral-amount">$5</td><td data-slot="referral-source">由 zwqn9kx@briarst.us 邀请</td><td data-slot="referral-date" title="2026年7月20日">2026年7月20日</td><td data-slot="referral-action"><button type="button">查看奖励</button></td></tr>
-<tr data-status="applied" data-source="inviter"><td data-slot="referral-amount">$5</td><td data-slot="referral-source">已邀请 ty9ke20xv0g2@harvinton.us</td><td data-slot="referral-date" title="2026年7月18日">2026年7月18日</td><td data-slot="referral-action"><button type="button" disabled="">奖励已使用</button></td></tr>
+<div data-hk="0000000100000000000100000500a140050021" data-slot="referrals-table"><table data-slot="referrals-table-element"><thead><tr><th>奖励</th><th>描述</th><th>日期</th><th></th></tr></thead><tbody>
+<tr data-hk="0000000100000000000100000500a1400500220" data-status="available" data-source="inviter"><td data-slot="referral-amount">$5</td><td data-slot="referral-source">已邀请 w6rwq23cmb@harvinton.us</td><td data-slot="referral-date" title="2026年7月22日">2026年7月22日</td><td data-slot="referral-action"><button type="button">查看奖励</button></td></tr>
+<tr data-hk="0000000100000000000100000500a1400500221" data-status="available" data-source="invitee"><td data-slot="referral-amount">$5</td><td data-slot="referral-source">由 zwqn9kx@briarst.us 邀请</td><td data-slot="referral-date" title="2026年7月20日">2026年7月20日</td><td data-slot="referral-action"><button type="button">查看奖励</button></td></tr>
+<tr data-hk="0000000100000000000100000500a1400500222" data-status="applied" data-source="inviter"><td data-slot="referral-amount">$5</td><td data-slot="referral-source">已邀请 ty9ke20xv0g2@harvinton.us</td><td data-slot="referral-date" title="2026年7月18日">2026年7月18日</td><td data-slot="referral-action"><button type="button" disabled="">奖励已使用</button></td></tr>
 </tbody></table></div>
 `
 

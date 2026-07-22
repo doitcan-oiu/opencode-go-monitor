@@ -29,7 +29,7 @@ var (
 
 	// 邀请奖励表解析：先框定表区域，再逐行取 data-status / data-source 及各字段。
 	reReferralsTable = regexp.MustCompile(`(?s)data-slot="referrals-table".*?</table>`)
-	reReferralRow    = regexp.MustCompile(`(?s)<tr\s+data-status="[^"]*"[^>]*>.*?</tr>`)
+	reReferralRow    = regexp.MustCompile(`(?s)<tr\b[^>]*\bdata-status="[^"]*"[^>]*>.*?</tr>`)
 	reRefStatus      = regexp.MustCompile(`data-status="([^"]*)"`)
 	reRefSource      = regexp.MustCompile(`data-source="([^"]*)"`)
 	reRefAmount      = regexp.MustCompile(`data-slot="referral-amount"[^>]*>\s*([^<]*?)\s*<`)
