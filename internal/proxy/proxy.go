@@ -72,6 +72,7 @@ func (p *Proxy) handleForward(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", "读取请求体失败")
 		return
 	}
+	body = applyModelOverrides(body)
 	maxAttempts := p.store.GetSettings().MaxRetries + 1
 
 	var (
@@ -120,6 +121,28 @@ func (p *Proxy) handleForward(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeErr(w, http.StatusBadGateway, "upstream_error", "已尝试 "+fmt.Sprint(len(used))+" 个 Key 均失败: "+lastErr)
+}
+
+// applyModelOverrides 按模型对请求体做特定改写（当前：kimi-k3 强制 temperature=1）。
+// 仅当 body 是带有 model 字段的 JSON 对象时生效；解析失败或不匹配则原样返回。
+func applyModelOverrides(body []byte) []byte {
+	if len(bytes.TrimSpace(body)) == 0 {
+		return body
+	}
+	var m map[string]any
+	if err := json.Unmarshal(body, &m); err != nil {
+		return body // 非 JSON（或非对象），不动
+	}
+	model, _ := m["model"].(string)
+	if model != "kimi-k3" {
+		return body
+	}
+	m["temperature"] = 1
+	out, err := json.Marshal(m)
+	if err != nil {
+		return body
+	}
+	return out
 }
 
 // retryable 报告该上游状态码是否应改用其它 Key 重试。
